@@ -4,6 +4,19 @@ from .models import Job, Applications
 from .forms import JobForm, ApplicationForm
 from notifications.services import create_notification
 
+# rest imports
+from rest_framework.response import Response
+from rest_framework.decorators import api_view  
+from .serializers import JobSerializer
+
+# rest api
+@api_view(['GET'])
+def api_job_list(request):
+    jobs = Job.objects.all()
+    serializer = JobSerializer(jobs, many = True)
+    return Response(serializer.data)
+
+
 # Create your views here.
 
 @login_required
@@ -69,50 +82,6 @@ def apply_job(request, job_id):
             'job': job
         }
     )
-
-
-# @login_required
-# def apply_job(request, job_id):
-#     if not request.user.is_verified or request.user.role != 'freelancer':
-#         return render(request, 'users/not_verified.html', {"username" : request.user.username})
-
-#     job = get_object_or_404(Job, id = job_id)
-#     if request.method == "POST":
-#         form = ApplicationForm(request.POST)
-#         if form.is_valid():
-#             application = form.save(commit=False)
-#             application.job = job
-#             application.freelancer = request.user
-#             application.save()
-#             return redirect('freelancer_setup')
-#     else:
-#         form = ApplicationForm()
-#     return render(request, 'jobs/apply_job.html', {'form' : form, 'job': job})
-
-# @login_required
-# def client_dashboard(request):
-#     if request.user.role != 'client':
-#         return render(request, 'users/not_verified.html')
-#     jobs = Job.objects.filter(client = request.user).order_by('-created_at')
-#     return render(request, 'users/client_dashboard.html', {'jobs' : jobs})
-
-# @login_required
-# def freelance_setup(request):
-#     if request.user.role != 'freelancer':
-#         return render(request, 'users/not_verified.html')
-
-#     jobs = Job.objects.all().order_by('-created_at')
-#     applications = Applications.objects.filter(freelancer=request.user).order_by('-applied_at')
-
-#     print(jobs)
-#     print(applications)
-
-#     return render(request, 'users/freelancer_setup.html', {
-#         'jobs': jobs,
-#         'applications': applications,
-#         'username': request.user.username
-#     })
-
 
 @login_required
 def job_list(request):

@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'jobs',
     'notifications',
     'channels',
+    'rest_framework',
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'
