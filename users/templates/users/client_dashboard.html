@@ -1,0 +1,47 @@
+<h1>Client Dashboard</h1>
+<a href="{% url 'create_job' %}">Create New Job</a>
+<ul>
+  {% for job in jobs %}
+    <li>
+      <strong>{{ job.title }}</strong> ({{ job.created_at }})
+      <a href="{% url 'view_applications' job.id %}">View Applications</a>
+    </li>
+  {% empty %}
+    <li>No jobs posted yet.</li>
+  {% endfor %}
+</ul>
+<form method="post" action="{% url 'logout' %}">
+  {% csrf_token %}
+  <button type="submit">Logout</button>
+</form>
+
+{% if request.user.is_authenticated %}
+<script>
+
+  const socket = new WebSocket(
+    'ws://' + window.location.host + '/ws/notifications/'
+  );
+  
+  socket.onopen = function() {
+      console.log("WEBSOCKET CONNECTED");
+  };
+  
+  socket.onmessage = function(e) {
+  
+    const data = JSON.parse(e.data);
+  
+    console.log(data);
+  
+    alert(data.title + " - " + data.message);
+  };
+  
+  socket.onerror = function(e) {
+      console.log("SOCKET ERROR", e);
+  };
+  
+  socket.onclose = function(e) {
+      console.log("SOCKET CLOSED", e);
+  };
+  
+  </script>
+{% endif %}

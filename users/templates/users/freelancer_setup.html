@@ -1,0 +1,61 @@
+<h1>Welcome {{username}} to Freelancer Setup</h1>
+
+<h2>Posted Jobs </h2>
+<ul>
+    {% for job in jobs %}
+    <li>
+      <strong>{{ job.title }}</strong> ({{ job.created_at }})
+      <a href="{% url 'apply_job' job.id %}">Apply job</a>
+    </li>
+    {% empty %}
+        <li>No jobs Available at the moment.</li>
+    {% endfor %}
+</ul>
+
+<h2>Your Applications</h2>
+<ul>
+  {% for app in applications %}
+    <li>
+      Applied to <strong>{{ app.job.title }}</strong> on {{ app.applied_at }}<br>
+      <em>{{ app.cover_letter }}</em>
+    </li>
+  {% empty %}
+    <li>You haven't applied to any jobs yet.</li>
+  {% endfor %}
+</ul>
+
+<form method="post" action="{% url 'logout' %}">
+    {% csrf_token %}
+    <button type="submit">Logout</button>
+</form>
+
+{% if request.user.is_authenticated %}
+<script>
+
+  const socket = new WebSocket(
+  'ws://' + window.location.host + '/ws/notifications/'
+  );
+  
+  socket.onopen = function() {
+    console.log("WEBSOCKET CONNECTED");
+  };
+  
+  socket.onmessage = function(e) {
+  
+    const data = JSON.parse(e.data);
+  
+    console.log(data);
+  
+    alert(data.title + " - " + data.message);
+  };
+  
+  socket.onerror = function(e) {
+    console.log("SOCKET ERROR", e);
+  };
+  
+  socket.onclose = function(e) {
+    console.log("SOCKET CLOSED", e);
+  };
+  
+  </script>
+{% endif %}
