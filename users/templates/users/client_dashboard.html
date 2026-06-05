@@ -1,5 +1,50 @@
 <h1>Client Dashboard</h1>
+
+<div style="position:absolute; top:20px; right:20px;">
+    <button id="notificationBell" style="position:relative;">
+        🔔
+        <span id="notificationCount"
+              style="
+                position:absolute;
+                top:-8px;
+                right:-8px;
+                background:red;
+                color:white;
+                border-radius:50%;
+                padding:2px 6px;
+                font-size:12px;">
+            {{ unread_notifications_count }}
+        </span>
+    </button>
+
+    <div id="notificationDropdown"
+         style="
+            display:none;
+            position:absolute;
+            right:0;
+            width:300px;
+            background:white;
+            border:1px solid #ddd;
+            max-height:400px;
+            overflow-y:auto;
+            z-index:1000;">
+
+        {% for notification in notifications %}
+            <div class="notification-item"
+                 style="padding:10px;border-bottom:1px solid #eee;">
+                <strong>{{ notification.title }}</strong><br>
+                {{ notification.message }}
+            </div>
+        {% empty %}
+            <div id="emptyNotification" style="padding:10px;">
+                No notifications
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
 <a href="{% url 'create_job' %}">Create New Job</a>
+<p>Total Notifications: {{ notifications|length }}</p>
 <ul>
   {% for job in jobs %}
     <li>
@@ -10,38 +55,64 @@
     <li>No jobs posted yet.</li>
   {% endfor %}
 </ul>
+
 <form method="post" action="{% url 'logout' %}">
   {% csrf_token %}
   <button type="submit">Logout</button>
 </form>
 
+
 {% if request.user.is_authenticated %}
 <script>
+const bell = document.getElementById("notificationBell");
+const dropdown = document.getElementById("notificationDropdown");
+const countElement = document.getElementById("notificationCount");
 
-  const socket = new WebSocket(
+bell.addEventListener("click", () => {
+    dropdown.style.display =
+        dropdown.style.display === "none" ? "block" : "none";
+});
+
+const socket = new WebSocket(
     'ws://' + window.location.host + '/ws/notifications/'
-  );
-  
-  socket.onopen = function() {
-      console.log("WEBSOCKET CONNECTED");
-  };
-  
-  socket.onmessage = function(e) {
-  
+);
+
+socket.onmessage = function(e) {
+
     const data = JSON.parse(e.data);
-  
-    console.log(data);
-  
-    alert(data.title + " - " + data.message);
-  };
-  
-  socket.onerror = function(e) {
-      console.log("SOCKET ERROR", e);
-  };
-  
-  socket.onclose = function(e) {
-      console.log("SOCKET CLOSED", e);
-  };
-  
-  </script>
+
+    let count = parseInt(countElement.innerText || 0);
+    countElement.innerText = count + 1;
+
+    const emptyDiv = document.getElementById("emptyNotification");
+    if (emptyDiv) {
+        emptyDiv.remove();
+    }
+
+    const notification = document.createElement("div");
+
+    notification.classList.add("notification-item");
+    notification.style.padding = "10px";
+    notification.style.borderBottom = "1px solid #eee";
+
+    notification.innerHTML = `
+        <strong>${data.title}</strong><br>
+        ${data.message}
+    `;
+
+    dropdown.prepend(notification);
+};
+
+socket.onopen = () => {
+    console.log("WebSocket Connected");
+};
+
+socket.onerror = (e) => {
+    console.log("Socket Error", e);
+};
+
+socket.onclose = (e) => {
+    console.log("Socket Closed", e);
+};
+</script>
 {% endif %}

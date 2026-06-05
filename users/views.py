@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 
 # Import models from jobs app
 from jobs.models import Job, Applications
+from notifications.models import Notification
 
 # Create your views here.
 def signup_view(request):
@@ -39,7 +40,10 @@ def client_dashboard(request):
     if request.user.role != 'client':
         return render(request, 'users/not_verified.html')
     jobs = Job.objects.filter(client = request.user).order_by('-created_at')
-    return render(request, 'users/client_dashboard.html', {'jobs' : jobs})
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_notifications_count = notifications.count()
+    print(notifications.count())
+    return render(request, 'users/client_dashboard.html', {'jobs' : jobs, 'notifications': notifications,  'unread_notifications_count': unread_notifications_count})
 
 
 @login_required
@@ -49,14 +53,17 @@ def freelancer_setup(request):
 
     jobs = Job.objects.all().order_by('-created_at')
     applications = Applications.objects.filter(freelancer=request.user).order_by('-applied_at')
-
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
+    unread_notifications_count = notifications.count()
     print(jobs)
     print(applications)
 
     return render(request, 'users/freelancer_setup.html', {
         'jobs': jobs,
         'applications': applications,
-        'username': request.user.username
+        'username': request.user.username,
+        'notifications': notifications,  
+        'unread_notifications_count': unread_notifications_count
     })
 
 
