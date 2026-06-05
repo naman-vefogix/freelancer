@@ -93,7 +93,15 @@ DATABASES = {
         'PASSWORD': 'postgres',
         'HOST': 'localhost',
         'PORT': '5432',
-    }
+    },
+    "activity": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "freelancer_activity",
+        "USER": "postgres",
+        "PASSWORD": "postgres",
+        "HOST": "localhost",
+        "PORT": "5432",
+    },
 }    
 
 # Password validation

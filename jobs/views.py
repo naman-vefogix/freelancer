@@ -16,7 +16,7 @@ from rest_framework import generics
 from rest_framework.views import APIView
 
 # test postman - will explicit mention user
-from users.models import CustomUser 
+from users.models import CustomUser, UserActivity
 
 ## rest api
 
@@ -62,62 +62,7 @@ class DetailJobAPIView(APIView):
         job.delete()
         return Response({"message": "Deleted successfully"},status=status.HTTP_204_NO_CONTENT)
 
-#using generics
-class JobListAPIView(generics.ListAPIView):
-    queryset = Job.objects.all()
-    serializer_class = JobSerializer
 
-class JobListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Job.objects.all()
-    serializer_class = JobSerializer
-
-class JobDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Job.objects.all()
-    serializer_class = JobSerializer
-    lookup_field = 'id'
-
-# manual REST APIs 
-@api_view(['GET'])
-def api_job_list(request):
-    job = Job.objects.all()
-    serializer = JobSerializer(job,many = True)
-    return Response(serializer.data)
-
-@api_view(['GET'])
-def api_job_detail(request,job_id = None):
-    try:
-        job = Job.objects.get(id = job_id)
-    except Job.DoesNotExist:
-        return Response({'error':"job not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-    serializer = JobSerializer(job)
-    return Response(serializer.data)
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated]) #
-def api_create_job(request):
-    serializer = JobSerializer(data = request.data)
-    if serializer.is_valid():
-        dummy_user = CustomUser.objects.first() # explicit user mentioned here
-        # serializer.save(client = request.user)
-        serializer.save(client = dummy_user) # have to change dummy user here 
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-@api_view(['PATCH'])
-def api_update_job(request, job_id):
-    try:
-        job = Job.objects.get(id = job_id)
-    except Job.DoesNotExist:
-        return Response({"error" : "job not found"}, status=status.HTTP_404_NOT_FOUND)
-    serializer = JobSerializer(job, data=request.data,partial = True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
-
-
-# Create your views here.
 
 @login_required
 def create_job(request):
@@ -129,6 +74,18 @@ def create_job(request):
             job = form.save(commit=False)
             job.client = request.user
             job.save()
+
+            UserActivity.objects.create(
+                user=request.user,
+                event_type="marketplace",
+                action_type="create_job",
+                metadata={
+                    "role": request.user.role,
+                    "title" : job.title,
+                    "description" : job.description,
+                }
+            )
+
             return redirect('client_dashboard')
     else:
         form = JobForm()
@@ -161,6 +118,17 @@ def apply_job(request, job_id):
 
             print("APPLICATION SAVED")
 
+            UserActivity.objects.create(
+                user=request.user,
+                event_type="marketplace",
+                action_type="apply_job",
+                metadata={
+                    "role": request.user.role,
+                    "title" : job.title,
+                    "description" : job.description,
+                }
+            )
+
             create_notification(
                 job.client,
                 "New Job Application",
@@ -192,4 +160,70 @@ def job_list(request):
 def view_applications(request, job_id):
     job = get_object_or_404(Job, id = job_id, client = request.user)
     applications = job.applications.all()
+    UserActivity.objects.create(
+        user=request.user,
+        event_type="marketplace",
+        action_type="view_applications",
+        metadata={
+        }
+    )
     return render(request, 'jobs/view_applications.html', {'job': job, 'applications': applications})
+
+
+
+#using generics
+# class JobListAPIView(generics.ListAPIView):
+#     queryset = Job.objects.all()
+#     serializer_class = JobSerializer
+
+# class JobListCreateAPIView(generics.ListCreateAPIView):
+#     queryset = Job.objects.all()
+#     serializer_class = JobSerializer
+
+# class JobDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = Job.objects.all()
+#     serializer_class = JobSerializer
+#     lookup_field = 'id'
+
+# # manual REST APIs 
+# @api_view(['GET'])
+# def api_job_list(request):
+#     job = Job.objects.all()
+#     serializer = JobSerializer(job,many = True)
+#     return Response(serializer.data)
+
+# @api_view(['GET'])
+# def api_job_detail(request,job_id = None):
+#     try:
+#         job = Job.objects.get(id = job_id)
+#     except Job.DoesNotExist:
+#         return Response({'error':"job not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+#     serializer = JobSerializer(job)
+#     return Response(serializer.data)
+
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated]) #
+# def api_create_job(request):
+#     serializer = JobSerializer(data = request.data)
+#     if serializer.is_valid():
+#         dummy_user = CustomUser.objects.first() # explicit user mentioned here
+#         # serializer.save(client = request.user)
+#         serializer.save(client = dummy_user) # have to change dummy user here 
+#         return Response(serializer.data, status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['PATCH'])
+# def api_update_job(request, job_id):
+#     try:
+#         job = Job.objects.get(id = job_id)
+#     except Job.DoesNotExist:
+#         return Response({"error" : "job not found"}, status=status.HTTP_404_NOT_FOUND)
+#     serializer = JobSerializer(job, data=request.data,partial = True)
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data)
+#     return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+
+# Create your views here.

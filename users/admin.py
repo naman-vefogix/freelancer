@@ -4,7 +4,7 @@ from django.contrib import admin
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
+from .models import CustomUser, UserActivity
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -14,3 +14,9 @@ class CustomUserAdmin(UserAdmin):
     )
     list_display = ('username', 'email', 'role', 'is_verified')
     list_filter = ('role', 'is_verified')
+
+
+@admin.register(UserActivity)
+class UserActivityAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event_type', 'action_type', 'entity_name', 'metadata', 'created_at')
+    list_filter = ('event_type', 'action_type') 
