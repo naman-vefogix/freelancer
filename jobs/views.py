@@ -16,7 +16,8 @@ from rest_framework import generics
 from rest_framework.views import APIView
 
 # test postman - will explicit mention user
-from users.models import CustomUser, UserActivity
+from users.models import CustomUser
+from activity.models import UserActivity
 
 ## rest api
 
@@ -75,16 +76,16 @@ def create_job(request):
             job.client = request.user
             job.save()
 
-            UserActivity.objects.create(
-                user=request.user,
-                event_type="marketplace",
-                action_type="create_job",
-                metadata={
-                    "role": request.user.role,
-                    "title" : job.title,
-                    "description" : job.description,
-                }
-            )
+            # UserActivity.objects.create(
+            #     user=request.user,
+            #     event_type="marketplace",
+            #     action_type="create_job",
+            #     metadata={
+            #         "role": request.user.role,
+            #         "title" : job.title,
+            #         "description" : job.description,
+            #     }
+            # )
 
             return redirect('client_dashboard')
     else:
@@ -118,16 +119,16 @@ def apply_job(request, job_id):
 
             print("APPLICATION SAVED")
 
-            UserActivity.objects.create(
-                user=request.user,
-                event_type="marketplace",
-                action_type="apply_job",
-                metadata={
-                    "role": request.user.role,
-                    "title" : job.title,
-                    "description" : job.description,
-                }
-            )
+            # UserActivity.objects.create(
+            #     user=request.user,
+            #     event_type="marketplace",
+            #     action_type="apply_job",
+            #     metadata={
+            #         "role": request.user.role,
+            #         "title" : job.title,
+            #         "description" : job.description,
+            #     }
+            # )
 
             create_notification(
                 job.client,
@@ -160,13 +161,13 @@ def job_list(request):
 def view_applications(request, job_id):
     job = get_object_or_404(Job, id = job_id, client = request.user)
     applications = job.applications.all()
-    UserActivity.objects.create(
-        user=request.user,
-        event_type="marketplace",
-        action_type="view_applications",
-        metadata={
-        }
-    )
+    # UserActivity.objects.create(
+    #     user=request.user,
+    #     event_type="marketplace",
+    #     action_type="view_applications",
+    #     metadata={
+    #     }
+    # )
     return render(request, 'jobs/view_applications.html', {'job': job, 'applications': applications})
 
 

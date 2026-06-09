@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 # Import models from jobs app
 from jobs.models import Job, Applications
 from notifications.models import Notification
-from users.models import UserActivity
+from activity.models import UserActivity
 
 from django.utils import timezone
 
@@ -17,14 +17,14 @@ def signup_view(request):
             user = form.save(commit=False)
             user.is_active = True
             user.save()
-            UserActivity.objects.create(
-                user=request.user,
-                event_type="user",
-                action_type="signup",
-                metadata={
-                    "role": request.user.role
-                }
-            )
+            # UserActivity.objects.create(
+            #     user=request.user,
+            #     event_type="user",
+            #     action_type="signup",
+            #     metadata={
+            #         "role": request.user.role
+            #     }
+            # )
             if user.role == 'client':
                 return redirect('client_dashboard')
             elif user.role == 'freelancer':
@@ -80,14 +80,14 @@ def freelancer_setup(request):
 
 @login_required
 def login_redirect_view(request):
-    UserActivity.objects.create(
-        user=request.user,
-        event_type="user",
-        action_type="login",
-        metadata={
-            "role": request.user.role
-        }
-    )
+    # UserActivity.objects.create(
+    #     user=request.user,
+    #     event_type="user",
+    #     action_type="login",
+    #     metadata={
+    #         "role": request.user.role
+    #     }
+    # )
     if request.user.role == "client":
         return redirect("client_dashboard")
     elif request.user.role == "freelancer":

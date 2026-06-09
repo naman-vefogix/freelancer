@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'notifications',
     'channels',
     'rest_framework',
+    'activity',
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'
@@ -54,6 +55,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "users.middleware.UserActivityMiddleware",
 ]
 
 ROOT_URLCONF = 'freelancer.urls'
@@ -103,6 +105,10 @@ DATABASES = {
         "PORT": "5432",
     },
 }    
+
+DATABASE_ROUTERS = [
+   'freelancer.routers.ActivityRouter',
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
