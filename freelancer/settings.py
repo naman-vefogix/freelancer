@@ -37,11 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'users',
-    'jobs',
     'notifications',
     'channels',
     'rest_framework',
     'activity',
+    'jobs.apps.JobsConfig',
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'

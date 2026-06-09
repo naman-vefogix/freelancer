@@ -33,12 +33,16 @@
 
   <div class="card" id="jobs-list">
     {% for job in jobs %}
-      <div class="job-item">
+      <div class="job-item" id="job-item-{{ job.id }}">
         <div>
           <p class="job-title">{{ job.title }}</p>
           <p class="job-meta">Posted {{ job.created_at }}</p>
         </div>
-        <button onclick="viewApplications('{{ job.id }}', '{{ job.title }}')" class="btn">View applications</button>
+        <div style="display:flex; gap:8px">
+          <button onclick="viewApplications('{{ job.id }}', '{{ job.title }}')" class="btn">Applications</button>
+          <button onclick="openEditModal('{{ job.id }}', '{{ job.title }}', '{{ job.description }}')" class="btn">Edit</button>
+          <button onclick="deleteJob('{{ job.id }}')" class="btn btn-danger">Delete</button>
+        </div>
       </div>
     {% empty %}
       <p class="empty" id="no-jobs">No jobs posted yet.</p>
@@ -63,6 +67,27 @@
     </div>
     <div id="createError" style="color:#c0392b; font-size:13px; margin-bottom:.75rem; display:none"></div>
     <button onclick="submitJob()" class="btn btn-primary" style="width:100%">Post job</button>
+  </div>
+</div>
+
+<!-- edit job modal -->
+<div id="editModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:1.5rem; width:100%; max-width:480px; margin:1rem">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem">
+      <h2 style="font-size:18px; font-weight:500">Edit job</h2>
+      <button onclick="closeEditModal()" class="btn" style="padding:4px 10px">✕</button>
+    </div>
+    <input type="hidden" id="editJobId">
+    <div class="form-group">
+      <label>Job title</label>
+      <input type="text" id="editJobTitle">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="editJobDescription" rows="4"></textarea>
+    </div>
+    <div id="editError" style="color:#c0392b; font-size:13px; margin-bottom:.75rem; display:none"></div>
+    <button onclick="submitEdit()" class="btn btn-primary" style="width:100%">Save changes</button>
   </div>
 </div>
 
@@ -93,7 +118,7 @@ bell.addEventListener("click", () => {
   dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
 });
 
-// create job modal
+// create job
 function openCreateModal() {
   document.getElementById('createModal').style.display = 'flex';
 }
@@ -119,33 +144,74 @@ function submitJob() {
   })
   .then(res => res.json())
   .then(data => {
-    if (data.id) {
-      closeCreateModal();
-      location.reload();
-    } else {
-      errorDiv.innerText = JSON.stringify(data);
-      errorDiv.style.display = 'block';
+    if (data.id) { closeCreateModal(); location.reload(); }
+    else { errorDiv.innerText = JSON.stringify(data); errorDiv.style.display = 'block'; }
+  });
+}
+
+// edit job
+function openEditModal(jobId, jobTitle, jobDescription) {
+  document.getElementById('editJobId').value = jobId;
+  document.getElementById('editJobTitle').value = jobTitle;
+  document.getElementById('editJobDescription').value = jobDescription;
+  document.getElementById('editModal').style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('editModal').style.display = 'none';
+  document.getElementById('editError').style.display = 'none';
+}
+function submitEdit() {
+  const jobId = document.getElementById('editJobId').value;
+  const title = document.getElementById('editJobTitle').value.trim();
+  const description = document.getElementById('editJobDescription').value.trim();
+  const errorDiv = document.getElementById('editError');
+  if (!title || !description) {
+    errorDiv.innerText = 'Both fields are required.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  fetch(`/jobs/${jobId}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+    body: JSON.stringify({ title, description })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.id) { closeEditModal(); location.reload(); }
+    else { errorDiv.innerText = JSON.stringify(data); errorDiv.style.display = 'block'; }
+  });
+}
+
+// delete job
+function deleteJob(jobId) {
+  if (!confirm('Delete this job? This cannot be undone.')) return;
+  fetch(`/jobs/${jobId}/`, {
+    method: 'DELETE',
+    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+  })
+  .then(res => {
+    if (res.status === 204) {
+      document.getElementById(`job-item-${jobId}`).remove();
+      const jobsList = document.getElementById('jobs-list');
+      if (!jobsList.querySelector('.job-item')) {
+        jobsList.innerHTML = '<p class="empty">No jobs posted yet.</p>';
+      }
     }
   });
 }
 
-// view applications modal
+// view applications
 function viewApplications(jobId, jobTitle) {
   document.getElementById('appsModalTitle').innerText = `Applications — ${jobTitle}`;
   document.getElementById('appsList').innerHTML = '<p style="color:#888; font-size:14px">Loading...</p>';
   document.getElementById('appsModal').style.display = 'flex';
-
   fetch(`/jobs/${jobId}/applications/`, {
     headers: { 'X-CSRFToken': getCookie('csrftoken') }
   })
   .then(res => res.json())
   .then(data => {
-    console.log(data); 
     const list = document.getElementById('appsList');
-    if (!data.length) {
-      list.innerHTML = '<p class="empty">No applications yet.</p>';
-      return;
-    }
+    if (!data.length) { list.innerHTML = '<p class="empty">No applications yet.</p>'; return; }
     list.innerHTML = data.map(app => `
       <div class="app-item">
         <p class="job-title">${app.freelancer_username}</p>
@@ -153,7 +219,7 @@ function viewApplications(jobId, jobTitle) {
         <p class="cover-letter">${app.cover_letter}</p>
       </div>
     `).join('');
-  })
+  });
 }
 function closeAppsModal() {
   document.getElementById('appsModal').style.display = 'none';
@@ -179,123 +245,3 @@ socket.onclose = (e) => console.log("Socket closed", e);
 </script>
 {% endif %}
 {% endblock %}
-
-<!-- <h1>Client Dashboard</h1>
-
-<div style="position:absolute; top:20px; right:20px;">
-    <button id="notificationBell" style="position:relative;">
-        🔔
-        <span id="notificationCount"
-              style="
-                position:absolute;
-                top:-8px;
-                right:-8px;
-                background:red;
-                color:white;
-                border-radius:50%;
-                padding:2px 6px;
-                font-size:12px;">
-            {{ unread_notifications_count }}
-        </span>
-    </button>
-
-    <div id="notificationDropdown"
-         style="
-            display:none;
-            position:absolute;
-            right:0;
-            width:300px;
-            background:white;
-            border:1px solid #ddd;
-            max-height:400px;
-            overflow-y:auto;
-            z-index:1000;">
-
-        {% for notification in notifications %}
-            <div class="notification-item"
-                 style="padding:10px;border-bottom:1px solid #eee;">
-                <strong>{{ notification.title }}</strong><br>
-                {{ notification.message }}
-            </div>
-        {% empty %}
-            <div id="emptyNotification" style="padding:10px;">
-                No notifications
-            </div>
-        {% endfor %}
-    </div>
-</div>
-
-<a href="{% url 'create_job' %}">Create New Job</a>
-<p>Total Notifications: {{ notifications|length }}</p>
-<ul>
-  {% for job in jobs %}
-    <li>
-      <strong>{{ job.title }}</strong> ({{ job.created_at }})
-      <a href="{% url 'view_applications' job.id %}">View Applications</a>
-    </li>
-  {% empty %}
-    <li>No jobs posted yet.</li>
-  {% endfor %}
-</ul>
-
-<form method="post" action="{% url 'logout' %}">
-  {% csrf_token %}
-  <button type="submit">Logout</button>
-</form>
-
-
-{% if request.user.is_authenticated %}
-<script>
-const bell = document.getElementById("notificationBell");
-const dropdown = document.getElementById("notificationDropdown");
-const countElement = document.getElementById("notificationCount");
-
-bell.addEventListener("click", () => {
-    dropdown.style.display =
-        dropdown.style.display === "none" ? "block" : "none";
-});
-
-const socket = new WebSocket(
-    'ws://' + window.location.host + '/ws/notifications/'
-);
-
-socket.onmessage = function(e) {
-
-    const data = JSON.parse(e.data);
-
-    let count = parseInt(countElement.innerText || 0);
-    countElement.innerText = count + 1;
-
-    const emptyDiv = document.getElementById("emptyNotification");
-    if (emptyDiv) {
-        emptyDiv.remove();
-    }
-
-    const notification = document.createElement("div");
-
-    notification.classList.add("notification-item");
-    notification.style.padding = "10px";
-    notification.style.borderBottom = "1px solid #eee";
-
-    notification.innerHTML = `
-        <strong>${data.title}</strong><br>
-        ${data.message}
-    `;
-
-    dropdown.prepend(notification);
-};
-
-socket.onopen = () => {
-    console.log("WebSocket Connected");
-};
-
-socket.onerror = (e) => {
-    console.log("Socket Error", e);
-};
-
-socket.onclose = (e) => {
-    console.log("Socket Closed", e);
-};
-</script>
-{% endif %} -->
-

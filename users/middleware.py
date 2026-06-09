@@ -1,5 +1,6 @@
 import time
 from activity.models import UserActivity
+from activity.context import current_user, current_request
 
 print("MIDDLEWARE FILE LOADED")
 
@@ -10,7 +11,12 @@ class UserActivityMiddleware:
 
     def __call__(self, request):
         start_time = time.time()
+        user = request.user if request.user.is_authenticated else None
+        user_token = current_user.set(user)
+        request_token = current_request.set(request)
         response = self.get_response(request)
+        current_user.reset(user_token)
+        current_request.reset(request_token)
         end_time = time.time()
 
         excluded_paths = [
