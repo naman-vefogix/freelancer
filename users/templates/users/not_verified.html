@@ -1,3 +1,13 @@
-<h1>hi {{username}}</h1>
+<!-- <h1>hi {{username}}</h1>
 <h2>Your profile is pending admin verification.</h2>
-<p>You cannot create or apply for jobs until an admin approves your account.</p>
+<p>You cannot create or apply for jobs until an admin approves your account.</p> -->
+
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="page" style="text-align:center; padding-top:4rem">
+  <h1 class="page-title">Access denied</h1>
+  <p class="page-subtitle">You don't have permission to view this page.</p>
+  <a href="{% url 'home' %}" class="btn">Go home</a>
+</div>
+{% endblock %}

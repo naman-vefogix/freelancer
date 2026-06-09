@@ -1,4 +1,119 @@
-<h1>Welcome {{username}} to Freelancer Setup</h1>
+{% extends 'base.html' %}
+{% block content %}
+<div class="page">
+  <div class="nav">
+    <span class="nav-brand">Hi, {{ username }}</span>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Log out</button>
+    </form>
+  </div>
+
+  <p class="section-label">Open jobs</p>
+  <div class="card">
+    {% for job in jobs %}
+      <div class="job-item">
+        <div>
+          <p class="job-title">{{ job.title }}</p>
+          <p class="job-meta">Posted {{ job.created_at }}</p>
+        </div>
+        <button onclick="openApplyModal('{{ job.id }}', '{{ job.title }}')" class="btn">Apply</button>
+      </div>
+    {% empty %}
+      <p class="empty">No jobs available at the moment.</p>
+    {% endfor %}
+  </div>
+
+  <div class="spacer"></div>
+
+  <p class="section-label">Your applications</p>
+  <div class="card">
+    {% for app in applications %}
+      <div class="app-item">
+        <p class="job-title">{{ app.job.title }}</p>
+        <p class="job-meta">Applied on {{ app.applied_at }}</p>
+        <p class="cover-letter">{{ app.cover_letter }}</p>
+      </div>
+    {% empty %}
+      <p class="empty">You haven't applied to any jobs yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- apply modal -->
+<div id="applyModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:1.5rem; width:100%; max-width:480px; margin:1rem">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem">
+      <h2 style="font-size:18px; font-weight:500" id="applyModalTitle">Apply</h2>
+      <button onclick="closeApplyModal()" class="btn" style="padding:4px 10px">✕</button>
+    </div>
+    <input type="hidden" id="applyJobId">
+    <div class="form-group">
+      <label>Cover letter</label>
+      <textarea id="coverLetter" rows="5" placeholder="Tell the client why you're a great fit..."></textarea>
+    </div>
+    <div id="applyError" style="color:#c0392b; font-size:13px; margin-bottom:.75rem; display:none"></div>
+    <button onclick="submitApplication()" class="btn btn-primary" style="width:100%">Submit application</button>
+  </div>
+</div>
+
+{% if request.user.is_authenticated %}
+<script>
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function openApplyModal(jobId, jobTitle) {
+  document.getElementById('applyJobId').value = jobId;
+  document.getElementById('applyModalTitle').innerText = `Apply for ${jobTitle}`;
+  document.getElementById('applyModal').style.display = 'flex';
+}
+function closeApplyModal() {
+  document.getElementById('applyModal').style.display = 'none';
+  document.getElementById('coverLetter').value = '';
+  document.getElementById('applyError').style.display = 'none';
+}
+function submitApplication() {
+  const jobId = document.getElementById('applyJobId').value;
+  const cover_letter = document.getElementById('coverLetter').value.trim();
+  const errorDiv = document.getElementById('applyError');
+  if (!cover_letter) {
+    errorDiv.innerText = 'Cover letter is required.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  fetch(`/jobs/${jobId}/apply/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+    body: JSON.stringify({ cover_letter })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.id) {
+      closeApplyModal();
+      location.reload();
+    } else {
+      errorDiv.innerText = JSON.stringify(data);
+      errorDiv.style.display = 'block';
+    }
+  });
+}
+
+const socket = new WebSocket('ws://' + window.location.host + '/ws/notifications/');
+socket.onopen = () => console.log("WebSocket connected");
+socket.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  alert(data.title + " - " + data.message);
+};
+socket.onerror = (e) => console.log("Socket error", e);
+socket.onclose = (e) => console.log("Socket closed", e);
+</script>
+{% endif %}
+{% endblock %}
+
+<!-- <h1>Welcome {{username}} to Freelancer Setup</h1>
 
 <h2>Posted Jobs </h2>
 <ul>
@@ -58,4 +173,4 @@
   };
   
   </script>
-{% endif %}
+{% endif %} -->

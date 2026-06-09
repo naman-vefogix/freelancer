@@ -1,4 +1,23 @@
-<h1>View application on jobs</h1>
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="page">
+  <a href="{% url 'client_dashboard' %}" class="btn">← Back</a>
+  <h1 class="page-title">Applications for {{ job.title }}</h1>
+  <div class="card">
+    {% for app in applications %}
+      <div class="app-item">
+        <p class="job-title">{{ app.freelancer.username }}</p>
+        <p class="job-meta">Applied on {{ app.applied_at }}</p>
+        <p class="cover-letter">{{ app.cover_letter }}</p>
+      </div>
+    {% empty %}
+      <p class="empty">No applications yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+<!-- <h1>View application on jobs</h1>
 
 <h2>Applications for {{ job.title }}</h2>
 <ul>
@@ -10,4 +29,4 @@
   {% empty %}
     <li>No applications yet.</li>
   {% endfor %}
-</ul>
+</ul> -->

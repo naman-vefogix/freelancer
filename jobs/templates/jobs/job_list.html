@@ -1,4 +1,24 @@
-<h2>Available Jobs</h2>
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="page">
+  <h1 class="page-title">All jobs</h1>
+  <div class="card">
+    {% for job in jobs %}
+      <div class="job-item">
+        <div>
+          <p class="job-title">{{ job.title }}</p>
+          <p class="job-meta">Posted {{ job.created_at }}</p>
+        </div>
+        <a href="{% url 'apply_job' job.id %}" class="btn">Apply</a>
+      </div>
+    {% empty %}
+      <p class="empty">No jobs available at the moment.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+<!-- <h2>Available Jobs</h2>
 <ul>
     {% for job in jobs %}
         <li>
@@ -6,4 +26,4 @@
             <a href="{% url 'apply_job' job.id %}">Apply</a>
         </li>
     {% endfor %}
-</ul>
+</ul> -->

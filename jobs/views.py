@@ -7,7 +7,7 @@ from notifications.services import create_notification
 # rest imports
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import JobSerializer
+from .serializers import JobSerializer, ApplicatonSerializer
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics
@@ -32,6 +32,8 @@ class JobAPIView(APIView):
     def post(self,request):
         serializer = JobSerializer(data=request.data)
         if serializer.is_valid():
+            if not request.user.is_verified or request.user.role != 'client':
+                return Response({"message" : "not allowed to create a job"}, status=status.HTTP_403_FORBIDDEN)
             serializer.save(client = request.user)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -63,112 +65,131 @@ class DetailJobAPIView(APIView):
         job.delete()
         return Response({"message": "Deleted successfully"},status=status.HTTP_204_NO_CONTENT)
 
+class ApplyJobAPIView(APIView):
+    def post(self, request, job_id):
+        job = get_object_or_404(Job, id=job_id)
+        serializer = ApplicatonSerializer(data = request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not request.user.is_verified or request.user.role != 'freelancer':
+            return Response({"message" : "not allowed to apply for job"}, status=status.HTTP_403_FORBIDDEN)
+        serializer.save(job = job, freelancer = request.user)
+        create_notification( job.client, "New Job Application", f"{request.user.username} applied for your job: {job.title}")
+        return Response(serializer.data,status=status.HTTP_202_ACCEPTED)
+
+class ViewApplicationsAPIView(APIView):
+    def get(self, request, job_id):
+        applications = Applications.objects.filter(job_id = job_id)
+        serializer = ApplicatonSerializer(applications, many = True)
+        return Response(serializer.data)
 
 
-@login_required
-def create_job(request):
-    if not request.user.is_verified or request.user.role != 'client':
-        return render(request, 'users/not_verified.html', {"username" : request.user.username})
-    if request.method == "POST":
-        form = JobForm(request.POST)
-        if form.is_valid() :  
-            job = form.save(commit=False)
-            job.client = request.user
-            job.save()
 
-            # UserActivity.objects.create(
-            #     user=request.user,
-            #     event_type="marketplace",
-            #     action_type="create_job",
-            #     metadata={
-            #         "role": request.user.role,
-            #         "title" : job.title,
-            #         "description" : job.description,
-            #     }
-            # )
 
-            return redirect('client_dashboard')
-    else:
-        form = JobForm()
-    return render(request, 'jobs/create_job.html',{'form' : form})
+# @login_required
+# def create_job(request):
+#     if not request.user.is_verified or request.user.role != 'client':
+#         return render(request, 'users/not_verified.html', {"username" : request.user.username})
+#     if request.method == "POST":
+#         form = JobForm(request.POST)
+#         if form.is_valid() :  
+#             job = form.save(commit=False)
+#             job.client = request.user
+#             job.save()
 
-@login_required
-def apply_job(request, job_id):
+#             # UserActivity.objects.create(
+#             #     user=request.user,
+#             #     event_type="marketplace",
+#             #     action_type="create_job",
+#             #     metadata={
+#             #         "role": request.user.role,
+#             #         "title" : job.title,
+#             #         "description" : job.description,
+#             #     }
+#             # )
 
-    if not request.user.is_verified or request.user.role != 'freelancer':
-        return render(
-            request,
-            'users/not_verified.html',
-            {"username": request.user.username}
-        )
+#             return redirect('client_dashboard')
+#     else:
+#         form = JobForm()
+#     return render(request, 'jobs/create_job.html',{'form' : form})
 
-    job = get_object_or_404(Job, id=job_id)
+# @login_required
+# def apply_job(request, job_id):
 
-    if request.method == "POST":
+#     if not request.user.is_verified or request.user.role != 'freelancer':
+#         return render(
+#             request,
+#             'users/not_verified.html',
+#             {"username": request.user.username}
+#         )
 
-        form = ApplicationForm(request.POST)
+#     job = get_object_or_404(Job, id=job_id)
 
-        if form.is_valid():
+#     if request.method == "POST":
 
-            application = form.save(commit=False)
+#         form = ApplicationForm(request.POST)
 
-            application.job = job
-            application.freelancer = request.user
+#         if form.is_valid():
 
-            application.save()
+#             application = form.save(commit=False)
 
-            print("APPLICATION SAVED")
+#             application.job = job
+#             application.freelancer = request.user
 
-            # UserActivity.objects.create(
-            #     user=request.user,
-            #     event_type="marketplace",
-            #     action_type="apply_job",
-            #     metadata={
-            #         "role": request.user.role,
-            #         "title" : job.title,
-            #         "description" : job.description,
-            #     }
-            # )
+#             application.save()
 
-            create_notification(
-                job.client,
-                "New Job Application",
-                f"{request.user.username} applied for your job: {job.title}"
-            )
+#             print("APPLICATION SAVED")
 
-            print("NOTIFICATION FUNCTION CALLED")
+#             # UserActivity.objects.create(
+#             #     user=request.user,
+#             #     event_type="marketplace",
+#             #     action_type="apply_job",
+#             #     metadata={
+#             #         "role": request.user.role,
+#             #         "title" : job.title,
+#             #         "description" : job.description,
+#             #     }
+#             # )
 
-            return redirect('freelancer_setup')
+#             create_notification(
+#                 job.client,
+#                 "New Job Application",
+#                 f"{request.user.username} applied for your job: {job.title}"
+#             )
 
-    else:
-        form = ApplicationForm()
+#             print("NOTIFICATION FUNCTION CALLED")
 
-    return render(
-        request,
-        'jobs/apply_job.html',
-        {
-            'form': form,
-            'job': job
-        }
-    )
+#             return redirect('freelancer_setup')
 
-@login_required
-def job_list(request):
-    jobs = Job.objects.all().order_by('-created_at')
-    return render(request, 'jobs/job_list.html', {'jobs': jobs})
+#     else:
+#         form = ApplicationForm()
 
-@login_required
-def view_applications(request, job_id):
-    job = get_object_or_404(Job, id = job_id, client = request.user)
-    applications = job.applications.all()
-    # UserActivity.objects.create(
-    #     user=request.user,
-    #     event_type="marketplace",
-    #     action_type="view_applications",
-    #     metadata={
-    #     }
-    # )
-    return render(request, 'jobs/view_applications.html', {'job': job, 'applications': applications})
+#     return render(
+#         request,
+#         'jobs/apply_job.html',
+#         {
+#             'form': form,
+#             'job': job
+#         }
+#     )
+
+# @login_required
+# def job_list(request):
+#     jobs = Job.objects.all().order_by('-created_at')
+#     return render(request, 'jobs/job_list.html', {'jobs': jobs})
+
+# @login_required
+# def view_applications(request, job_id):
+#     job = get_object_or_404(Job, id = job_id, client = request.user)
+#     applications = job.applications.all()
+#     # UserActivity.objects.create(
+#     #     user=request.user,
+#     #     event_type="marketplace",
+#     #     action_type="view_applications",
+#     #     metadata={
+#     #     }
+#     # )
+#     return render(request, 'jobs/view_applications.html', {'job': job, 'applications': applications})
 
 
 

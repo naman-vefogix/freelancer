@@ -1,4 +1,186 @@
-<h1>Client Dashboard</h1>
+{% extends 'base.html' %}
+{% block content %}
+<div class="page">
+  <div class="nav">
+    <span class="nav-brand">Client dashboard</span>
+    <div style="display:flex; align-items:center; gap:12px">
+      <div style="position:relative">
+        <button id="notificationBell" class="btn" style="padding:6px 10px">
+          🔔 <span id="notificationCount" class="notif-count">{{ unread_notifications_count }}</span>
+        </button>
+        <div id="notificationDropdown" style="display:none; position:absolute; right:0; width:300px; background:#fff; border:1px solid #e5e5e5; border-radius:10px; max-height:400px; overflow-y:auto; z-index:1000">
+          {% for notification in notifications %}
+            <div class="app-item" style="padding:10px 14px">
+              <p style="font-weight:500; font-size:14px">{{ notification.title }}</p>
+              <p style="font-size:13px; color:#888">{{ notification.message }}</p>
+            </div>
+          {% empty %}
+            <div id="emptyNotification" style="padding:10px 14px; font-size:13px; color:#888">No notifications</div>
+          {% endfor %}
+        </div>
+      </div>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Log out</button>
+      </form>
+    </div>
+  </div>
+
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem">
+    <p class="section-label">Your jobs</p>
+    <button onclick="openCreateModal()" class="btn btn-primary">+ Post job</button>
+  </div>
+
+  <div class="card" id="jobs-list">
+    {% for job in jobs %}
+      <div class="job-item">
+        <div>
+          <p class="job-title">{{ job.title }}</p>
+          <p class="job-meta">Posted {{ job.created_at }}</p>
+        </div>
+        <button onclick="viewApplications('{{ job.id }}', '{{ job.title }}')" class="btn">View applications</button>
+      </div>
+    {% empty %}
+      <p class="empty" id="no-jobs">No jobs posted yet.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- create job modal -->
+<div id="createModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:1.5rem; width:100%; max-width:480px; margin:1rem">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem">
+      <h2 style="font-size:18px; font-weight:500">Post a job</h2>
+      <button onclick="closeCreateModal()" class="btn" style="padding:4px 10px">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Job title</label>
+      <input type="text" id="jobTitle" placeholder="e.g. Senior React Developer">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="jobDescription" rows="4" placeholder="Describe the role..."></textarea>
+    </div>
+    <div id="createError" style="color:#c0392b; font-size:13px; margin-bottom:.75rem; display:none"></div>
+    <button onclick="submitJob()" class="btn btn-primary" style="width:100%">Post job</button>
+  </div>
+</div>
+
+<!-- view applications modal -->
+<div id="appsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; padding:1.5rem; width:100%; max-width:480px; margin:1rem; max-height:80vh; overflow-y:auto">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem">
+      <h2 style="font-size:18px; font-weight:500" id="appsModalTitle">Applications</h2>
+      <button onclick="closeAppsModal()" class="btn" style="padding:4px 10px">✕</button>
+    </div>
+    <div id="appsList"></div>
+  </div>
+</div>
+
+{% if request.user.is_authenticated %}
+<script>
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// notification bell
+const bell = document.getElementById("notificationBell");
+const dropdown = document.getElementById("notificationDropdown");
+const countElement = document.getElementById("notificationCount");
+bell.addEventListener("click", () => {
+  dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+});
+
+// create job modal
+function openCreateModal() {
+  document.getElementById('createModal').style.display = 'flex';
+}
+function closeCreateModal() {
+  document.getElementById('createModal').style.display = 'none';
+  document.getElementById('jobTitle').value = '';
+  document.getElementById('jobDescription').value = '';
+  document.getElementById('createError').style.display = 'none';
+}
+function submitJob() {
+  const title = document.getElementById('jobTitle').value.trim();
+  const description = document.getElementById('jobDescription').value.trim();
+  const errorDiv = document.getElementById('createError');
+  if (!title || !description) {
+    errorDiv.innerText = 'Both fields are required.';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  fetch('/jobs/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+    body: JSON.stringify({ title, description })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.id) {
+      closeCreateModal();
+      location.reload();
+    } else {
+      errorDiv.innerText = JSON.stringify(data);
+      errorDiv.style.display = 'block';
+    }
+  });
+}
+
+// view applications modal
+function viewApplications(jobId, jobTitle) {
+  document.getElementById('appsModalTitle').innerText = `Applications — ${jobTitle}`;
+  document.getElementById('appsList').innerHTML = '<p style="color:#888; font-size:14px">Loading...</p>';
+  document.getElementById('appsModal').style.display = 'flex';
+
+  fetch(`/jobs/${jobId}/applications/`, {
+    headers: { 'X-CSRFToken': getCookie('csrftoken') }
+  })
+  .then(res => res.json())
+  .then(data => {
+    console.log(data); 
+    const list = document.getElementById('appsList');
+    if (!data.length) {
+      list.innerHTML = '<p class="empty">No applications yet.</p>';
+      return;
+    }
+    list.innerHTML = data.map(app => `
+      <div class="app-item">
+        <p class="job-title">${app.freelancer_username}</p>
+        <p class="job-meta">${app.applied_at}</p>
+        <p class="cover-letter">${app.cover_letter}</p>
+      </div>
+    `).join('');
+  })
+}
+function closeAppsModal() {
+  document.getElementById('appsModal').style.display = 'none';
+}
+
+// websocket
+const socket = new WebSocket('ws://' + window.location.host + '/ws/notifications/');
+socket.onmessage = (e) => {
+  const data = JSON.parse(e.data);
+  let count = parseInt(countElement.innerText || 0);
+  countElement.innerText = count + 1;
+  const emptyDiv = document.getElementById("emptyNotification");
+  if (emptyDiv) emptyDiv.remove();
+  const item = document.createElement("div");
+  item.className = "app-item";
+  item.style.cssText = "padding:10px 14px";
+  item.innerHTML = `<p style="font-weight:500;font-size:14px">${data.title}</p><p style="font-size:13px;color:#888">${data.message}</p>`;
+  dropdown.prepend(item);
+};
+socket.onopen = () => console.log("WebSocket connected");
+socket.onerror = (e) => console.log("Socket error", e);
+socket.onclose = (e) => console.log("Socket closed", e);
+</script>
+{% endif %}
+{% endblock %}
+
+<!-- <h1>Client Dashboard</h1>
 
 <div style="position:absolute; top:20px; right:20px;">
     <button id="notificationBell" style="position:relative;">
@@ -115,4 +297,5 @@ socket.onclose = (e) => {
     console.log("Socket Closed", e);
 };
 </script>
-{% endif %}
+{% endif %} -->
+

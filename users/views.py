@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from .forms import SignupForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login
 
 # Import models from jobs app
 from jobs.models import Job, Applications
@@ -17,6 +18,7 @@ def signup_view(request):
             user = form.save(commit=False)
             user.is_active = True
             user.save()
+            login(request, user)
             # UserActivity.objects.create(
             #     user=request.user,
             #     event_type="user",
@@ -38,18 +40,11 @@ def signup_view(request):
 def home_view(request):
     return render(request, 'users/home.html')
 
-# @login_required
-# def client_dashboard(request):
-#     return render(request, 'users/client_dashboard.html', {"username" : request.user.username})
-
-# @login_required
-# def freelancer_setup(request):
-#     return render(request, 'users/freelancer_setup.html', {"username" : request.user.username})
 
 @login_required
 def client_dashboard(request):
     if request.user.role != 'client':
-        return render(request, 'users/not_verified.html')
+        return redirect('freelancer_setup')
     jobs = Job.objects.filter(client = request.user).order_by('-created_at')
     notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
     unread_notifications_count = notifications.count()
@@ -60,7 +55,7 @@ def client_dashboard(request):
 @login_required
 def freelancer_setup(request):
     if request.user.role != 'freelancer':
-        return render(request, 'users/not_verified.html')
+        return redirect('client_dashboard')
 
     jobs = Job.objects.all().order_by('-created_at')
     applications = Applications.objects.filter(freelancer=request.user).order_by('-applied_at')

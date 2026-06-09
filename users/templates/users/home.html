@@ -1,3 +1,14 @@
-<h1>Welcome to Freelancer Marketplace</h1>
+{% extends 'base.html' %}
+{% block content %}
+<div class="page" style="text-align:center; padding-top:4rem">
+  <h1 class="page-title">Freelancer Marketplace</h1>
+  <p class="page-subtitle">Post jobs or apply as a freelancer.</p>
+  <div style="display:flex; gap:8px; justify-content:center">
+    <a href="{% url 'signup' %}" class="btn btn-primary">Sign up</a>
+    <a href="{% url 'login' %}" class="btn">Log in</a>
+  </div>
+</div>
+{% endblock %}
+<!-- <h1>Welcome to Freelancer Marketplace</h1>
 <p><a href="{% url 'signup' %}">Sign up here</a></p>
-<p><a href="{% url 'login' %}"> login here</a></p>
+<p><a href="{% url 'login' %}"> login here</a></p> -->
