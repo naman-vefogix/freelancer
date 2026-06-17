@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 # Create your models here.
 
@@ -8,7 +9,7 @@ class UserActivity(models.Model):
     action_type = models.CharField(max_length=50, null=True, blank=True)
     entity_name = models.CharField(max_length=50, null=True, blank=True)
     metadata = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     
     class Meta:
         app_label = 'activity'  

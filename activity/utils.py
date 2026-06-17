@@ -1,6 +1,15 @@
 from .context import current_user, current_request
 from .models import UserActivity
+from .logger import activity_logger
 
+import json
+import threading
+
+from django.utils import timezone
+
+_buffer = []
+_buffer_lock = threading.Lock()
+DB_LOGGING_ENABLED = True
 
 def get_device_type(user_agent):
     ua = user_agent.lower()
@@ -36,14 +45,48 @@ def build_metadata(extra=None):
 
 
 def log_activity(event_type, action_type, entity_name=None, entity_id=None, extra_metadata=None):
+    
+    print(f"log_activity called: entity_id={entity_id}") 
     user = current_user.get()
+    metadata = build_metadata(extra=extra_metadata)
+    entry = {
+        "user_id": user.id if user else None,
+        "event_type": event_type,
+        "action_type": action_type,
+        "entity_name": entity_name,
+        "entity_id" : entity_id,
+        "metadata": metadata,
+        "created_at": timezone.now(),
+    }
+    activity_logger.info(json.dumps(entry, default=str))
+    if DB_LOGGING_ENABLED:
+        with _buffer_lock:
+            _buffer.append(entry)
+
+
+def flush_to_db():
+
+    if not DB_LOGGING_ENABLED:
+        return
+
+    with _buffer_lock:
+        if not _buffer:
+            return
+        to_insert = _buffer.copy()
+        _buffer.clear()
+
     try:
-        UserActivity.objects.create(
-            user_id=user.id if user else None,
-            event_type=event_type,
-            action_type=action_type,
-            entity_name=entity_name,
-            metadata=build_metadata(extra=extra_metadata),
-        )
-    except Exception as e:
-        print(f"Activity log failed: {e}")
+        UserActivity.objects.bulk_create([
+            UserActivity(
+                user_id=e["user_id"],
+                event_type=e["event_type"],
+                action_type=e["action_type"],
+                entity_name=e["entity_name"],
+                metadata=e["metadata"],
+                created_at=e["created_at"],
+            )
+            for e in to_insert
+        ])
+        print(f"[ACTIVITY] Flushed {len(to_insert)} records to DB")
+    except Exception as ex:
+        print(f"[ACTIVITY] DB flush failed: {ex}")

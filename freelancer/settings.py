@@ -40,8 +40,8 @@ INSTALLED_APPS = [
     'notifications',
     'channels',
     'rest_framework',
-    'activity',
-    'jobs.apps.JobsConfig',
+    'activity.apps.ActivityConfig',
+    'jobs'
 ]
 
 AUTH_USER_MODEL = 'users.CustomUser'
