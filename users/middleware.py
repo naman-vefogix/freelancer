@@ -19,7 +19,7 @@ class UserActivityMiddleware:
         end_time = time.time()
 
         included_paths = [
-            "/jobs/",
+            # "/jobs/",
         ]
 
         if not any(request.path.startswith(path) for path in included_paths):

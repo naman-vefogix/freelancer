@@ -17,7 +17,7 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('role', 'is_verified')
 
 
-@admin.register(UserActivity)
-class UserActivityAdmin(admin.ModelAdmin):
-    list_display = ('user_id', 'event_type', 'action_type', 'entity_name', 'metadata', 'created_at')
-    list_filter = ('event_type', 'action_type') 
+# @admin.register(UserActivity)
+# class UserActivityAdmin(admin.ModelAdmin):
+#     list_display = ('user_id', 'event_type', 'action_type', 'entity_name', 'metadata', 'created_at')
+#     list_filter = ('event_type', 'action_type') 

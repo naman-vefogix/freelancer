@@ -48,6 +48,7 @@ def log_activity(event_type, action_type, entity_name=None, entity_id=None, extr
     
     print(f"log_activity called: entity_id={entity_id}") 
     user = current_user.get()
+    print("current user is " ,user)
     metadata = build_metadata(extra=extra_metadata)
     entry = {
         "user_id": user.id if user else None,
